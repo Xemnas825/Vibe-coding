@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using VibeApi.Models;
+using VibeApi.Services;
 
 namespace VibeApi.Controllers;
 
@@ -7,56 +8,45 @@ namespace VibeApi.Controllers;
 [Route("api/[controller]")]
 public class TagsController : ControllerBase
 {
-    private static readonly List<Tag> _tags = new();
-    private static int _nextId = 1;
+    private readonly ITagService _tagService;
+
+    public TagsController(ITagService tagService)
+    {
+        _tagService = tagService;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Tag>> GetTags()
+    public async Task<ActionResult<IEnumerable<Tag>>> GetTags()
     {
-        return Ok(_tags);
+        var tags = await _tagService.GetAllTagsAsync();
+        return Ok(tags);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Tag> GetTag(int id)
+    public async Task<ActionResult<Tag>> GetTag(int id)
     {
-        var tag = _tags.FirstOrDefault(t => t.Id == id);
+        var tag = await _tagService.GetTagByIdAsync(id);
         return tag == null ? NotFound() : Ok(tag);
     }
 
     [HttpPost]
-    public ActionResult<Tag> CreateTag(TagDto tagDto)
+    public async Task<ActionResult<Tag>> CreateTag(TagDto tagDto)
     {
-        var tag = new Tag
-        {
-            Id = _nextId++,
-            Name = tagDto.Name,
-            Color = tagDto.Color,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _tags.Add(tag);
+        var tag = await _tagService.CreateTagAsync(tagDto);
         return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tag);
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateTag(int id, TagDto tagDto)
+    public async Task<IActionResult> UpdateTag(int id, TagDto tagDto)
     {
-        var tag = _tags.FirstOrDefault(t => t.Id == id);
-        if (tag == null) return NotFound();
-
-        tag.Name = tagDto.Name;
-        tag.Color = tagDto.Color;
-
-        return NoContent();
+        var success = await _tagService.UpdateTagAsync(id, tagDto);
+        return success ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteTag(int id)
+    public async Task<IActionResult> DeleteTag(int id)
     {
-        var tag = _tags.FirstOrDefault(t => t.Id == id);
-        if (tag == null) return NotFound();
-
-        _tags.Remove(tag);
-        return NoContent();
+        var success = await _tagService.DeleteTagAsync(id);
+        return success ? NoContent() : NotFound();
     }
 }

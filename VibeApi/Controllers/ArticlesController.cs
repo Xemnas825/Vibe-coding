@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using VibeApi.Models;
+using VibeApi.Services;
 
 namespace VibeApi.Controllers;
 
@@ -7,69 +8,52 @@ namespace VibeApi.Controllers;
 [Route("api/[controller]")]
 public class ArticlesController : ControllerBase
 {
-    private static readonly List<Article> _articles = new();
-    private static int _nextId = 1;
+    private readonly IArticleService _articleService;
+
+    public ArticlesController(IArticleService articleService)
+    {
+        _articleService = articleService;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Article>> GetArticles()
+    public async Task<ActionResult<IEnumerable<Article>>> GetArticles()
     {
-        return Ok(_articles);
+        var articles = await _articleService.GetAllArticlesAsync();
+        return Ok(articles);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Article> GetArticle(int id)
+    public async Task<ActionResult<Article>> GetArticle(int id)
     {
-        var article = _articles.FirstOrDefault(a => a.Id == id);
-        if (article == null) return NotFound();
-        
-        article.ViewCount++;
-        return Ok(article);
+        var article = await _articleService.GetArticleByIdAsync(id);
+        return article == null ? NotFound() : Ok(article);
+    }
+
+    [HttpGet("{id}/enriched")]
+    public async Task<ActionResult<ArticleResponse>> GetEnrichedArticle(int id)
+    {
+        var article = await _articleService.GetEnrichedArticleAsync(id);
+        return article == null ? NotFound() : Ok(article);
     }
 
     [HttpPost]
-    public ActionResult<Article> CreateArticle(ArticleDto articleDto)
+    public async Task<ActionResult<Article>> CreateArticle(ArticleDto articleDto)
     {
-        var article = new Article
-        {
-            Id = _nextId++,
-            Title = articleDto.Title,
-            Content = articleDto.Content,
-            AuthorId = articleDto.AuthorId,
-            CategoryId = articleDto.CategoryId,
-            TagIds = articleDto.TagIds,
-            IsPublished = articleDto.IsPublished,
-            CreatedAt = DateTime.UtcNow,
-            ViewCount = 0
-        };
-
-        _articles.Add(article);
+        var article = await _articleService.CreateArticleAsync(articleDto);
         return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article);
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateArticle(int id, ArticleDto articleDto)
+    public async Task<IActionResult> UpdateArticle(int id, ArticleDto articleDto)
     {
-        var article = _articles.FirstOrDefault(a => a.Id == id);
-        if (article == null) return NotFound();
-
-        article.Title = articleDto.Title;
-        article.Content = articleDto.Content;
-        article.AuthorId = articleDto.AuthorId;
-        article.CategoryId = articleDto.CategoryId;
-        article.TagIds = articleDto.TagIds;
-        article.IsPublished = articleDto.IsPublished;
-        article.UpdatedAt = DateTime.UtcNow;
-
-        return NoContent();
+        var success = await _articleService.UpdateArticleAsync(id, articleDto);
+        return success ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteArticle(int id)
+    public async Task<IActionResult> DeleteArticle(int id)
     {
-        var article = _articles.FirstOrDefault(a => a.Id == id);
-        if (article == null) return NotFound();
-
-        _articles.Remove(article);
-        return NoContent();
+        var success = await _articleService.DeleteArticleAsync(id);
+        return success ? NoContent() : NotFound();
     }
 }

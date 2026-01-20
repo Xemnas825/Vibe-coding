@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using VibeApi.Models;
+using VibeApi.Services;
 
 namespace VibeApi.Controllers;
 
@@ -7,58 +8,45 @@ namespace VibeApi.Controllers;
 [Route("api/[controller]")]
 public class CategoriesController : ControllerBase
 {
-    private static readonly List<Category> _categories = new();
-    private static int _nextId = 1;
+    private readonly ICategoryService _categoryService;
+
+    public CategoriesController(ICategoryService categoryService)
+    {
+        _categoryService = categoryService;
+    }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Category>> GetCategories()
+    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
     {
-        return Ok(_categories);
+        var categories = await _categoryService.GetAllCategoriesAsync();
+        return Ok(categories);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Category> GetCategory(int id)
+    public async Task<ActionResult<Category>> GetCategory(int id)
     {
-        var category = _categories.FirstOrDefault(c => c.Id == id);
+        var category = await _categoryService.GetCategoryByIdAsync(id);
         return category == null ? NotFound() : Ok(category);
     }
 
     [HttpPost]
-    public ActionResult<Category> CreateCategory(CategoryDto categoryDto)
+    public async Task<ActionResult<Category>> CreateCategory(CategoryDto categoryDto)
     {
-        var category = new Category
-        {
-            Id = _nextId++,
-            Name = categoryDto.Name,
-            Description = categoryDto.Description,
-            IsActive = categoryDto.IsActive,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _categories.Add(category);
+        var category = await _categoryService.CreateCategoryAsync(categoryDto);
         return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateCategory(int id, CategoryDto categoryDto)
+    public async Task<IActionResult> UpdateCategory(int id, CategoryDto categoryDto)
     {
-        var category = _categories.FirstOrDefault(c => c.Id == id);
-        if (category == null) return NotFound();
-
-        category.Name = categoryDto.Name;
-        category.Description = categoryDto.Description;
-        category.IsActive = categoryDto.IsActive;
-
-        return NoContent();
+        var success = await _categoryService.UpdateCategoryAsync(id, categoryDto);
+        return success ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteCategory(int id)
+    public async Task<IActionResult> DeleteCategory(int id)
     {
-        var category = _categories.FirstOrDefault(c => c.Id == id);
-        if (category == null) return NotFound();
-
-        _categories.Remove(category);
-        return NoContent();
+        var success = await _categoryService.DeleteCategoryAsync(id);
+        return success ? NoContent() : NotFound();
     }
 }
