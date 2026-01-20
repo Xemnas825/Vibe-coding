@@ -1,3 +1,5 @@
+using VibeApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +7,11 @@ builder.Services.AddHttpClient("JsonPlaceholder", client =>
 {
     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
 });
+
+builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<IAuthorService, AuthorService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
